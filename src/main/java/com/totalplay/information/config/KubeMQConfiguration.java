@@ -4,8 +4,12 @@
  * and open the template in the editor.
  */
 package com.totalplay.information.config;
+import io.kubemq.sdk.basic.ServerAddressNotSuppliedException;
 import io.kubemq.sdk.event.Channel;
 import io.kubemq.sdk.event.Subscriber;
+import io.kubemq.sdk.queue.Queue;
+
+import javax.net.ssl.SSLException;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -28,6 +32,11 @@ public class KubeMQConfiguration {
     @Bean
     public Channel channel() {
         return new Channel("chanel-images-request", "client-images-request", true, address);
+    }
+    
+    @Bean
+    public Queue queue() throws ServerAddressNotSuppliedException, SSLException {
+        return new Queue("chanel-images-request", "client-images-request", address);
     }
 
     String getAddress() {

@@ -13,5 +13,13 @@ import lombok.Data;
  */
 @Data
 public class ImagesModel {
-    private String idcommerce;
+    public String getIdcommerce() {
+		return idcommerce;
+	}
+
+	public void setIdcommerce(String idcommerce) {
+		this.idcommerce = idcommerce;
+	}
+
+	private String idcommerce;
 }
