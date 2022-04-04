@@ -51,7 +51,7 @@ public class InformationServiceImp implements InformationService, StreamObserver
     private Subscriber subscriber;
     private TaskExecutor taskExecutor;
     private Queue queue;
-            
+       
     public InformationServiceImp(Channel channel,Subscriber subscriber,TaskExecutor taskExecutor, Queue queue) {
         this.objectImages =null;
         this.channel = channel;
@@ -91,11 +91,12 @@ public class InformationServiceImp implements InformationService, StreamObserver
                 objectImages=null;
                 break;
             }
-            if(objectImages==null && max>=20000000){
-                System.out.println("-----task 3 -------"+max);
-                mp.put("images", "No data");
-                break;
-            }
+//            if(objectImages==null && max>=5){
+//                System.out.println("-----task 3 -------"+max);
+//                mp.put("images", "No data");
+//                break;
+//            }
+//            toSleep(1);
             max++;
         }
   
@@ -111,52 +112,24 @@ public class InformationServiceImp implements InformationService, StreamObserver
     public void publishImages(String idCommerce){
         System.out.println("-----task 1 -------");
         
-        
-//		try {
-//			Queue queue = new Queue("chanel-images-request", "ClientID", "localhost:50000");
-//	        SendMessageResult resSend;
-//			resSend = queue.SendQueueMessage(new Message()
-//			        .setBody(Converter.ToByteArray(idCommerce))
-//			        .setMetadata("someMeta"));
-//			 if (resSend.getIsError()) {
-//		            System.out.printf("Message enqueue error, error: %s", resSend.getError());
-//		     }
-//		} catch (ServerAddressNotSuppliedException | IOException e1) {
-//			System.out.println("Error set body: [chanel-images-request]");
-//            System.out.println(e1);
-//		} catch (Exception e) {
-//            System.out.println("Error set body: [chanel-images-request]");
-//            System.out.println(e);
-//        }
-        
+        Event event = new Event();
+        event.setEventId(getid());
+
         try {
-        	//System.out.println("Sending: {}", idCommerce);
-            final SendMessageResult result = queue.SendQueueMessage(new Message()
-                    .setBody(Converter.ToByteArray(idCommerce)));
-
-        } catch (ServerAddressNotSuppliedException | IOException e) {
-
+            System.out.println("Set body: [chanel-images-request]");
+            event.setBody(Converter.ToByteArray(idCommerce));
+        } catch (IOException e) {
+            System.out.println("Error set body: [chanel-images-request]");
+            System.out.println(e);
         }
 
-
-//        Event event = new Event();
-//        event.setEventId(getid());
-//
-//        try {
-//            System.out.println("Set body: [chanel-images-request]");
-//            event.setBody(Converter.ToByteArray(idCommerce));
-//        } catch (IOException e) {
-//            System.out.println("Error set body: [chanel-images-request]");
-//            System.out.println(e);
-//        }
-//
-//        try {
-//            System.out.println("publish Message in [chanel-images-request]");
-//            channel.SendEvent(event); 
-//        } catch (SSLException | ServerAddressNotSuppliedException e) {
-//            System.out.println("Error set body: [chanel-images-request]");
-//            System.out.println(e);
-//        }
+        try {
+            System.out.println("publish Message in [chanel-images-request]");
+            channel.SendEvent(event); 
+        } catch (SSLException | ServerAddressNotSuppliedException e) {
+            System.out.println("Error set body: [chanel-images-request]");
+            System.out.println(e);
+        }
 
     }
     
@@ -164,63 +137,32 @@ public class InformationServiceImp implements InformationService, StreamObserver
 /*RESPONSE IMAGEN*/
     @PostConstruct
     public void init() {           
-//        SubscribeRequest subscribeRequest = new SubscribeRequest();
-//        subscribeRequest.setChannel("chanel-images-response");
-//        subscribeRequest.setClientID("client-images-response");
-//        subscribeRequest.setSubscribeType(SubscribeType.EventsStore);
-//        subscribeRequest.setEventsStoreType(EventsStoreType.StartNewOnly);
-//        try {
-//            LOG.info("subscriber: chanel-images-response "+objectToJson(subscribeRequest));
-//            subscriber.SubscribeToEvents(subscribeRequest, this);
-//        } catch (ServerAddressNotSuppliedException | SSLException e) {
-//            LOG.info("Error subscriber: [chanel-images-response] ");
-//            System.out.println(e);
-//        }
+        SubscribeRequest subscribeRequest = new SubscribeRequest();
+        subscribeRequest.setChannel("chanel-images-response");
+        subscribeRequest.setClientID("client-images-response");
+        subscribeRequest.setSubscribeType(SubscribeType.EventsStore);
+        subscribeRequest.setEventsStoreType(EventsStoreType.StartNewOnly);
+        try {
+            LOG.info("subscriber: chanel-images-response "+objectToJson(subscribeRequest));
+            subscriber.SubscribeToEvents(subscribeRequest, this);
+        } catch (ServerAddressNotSuppliedException | SSLException e) {
+            LOG.info("Error subscriber: [chanel-images-response] ");
+            System.out.println(e);
+        }
     }
     
     @Override
     public void onNext(EventReceive eventReceive) {
-//        LOG.info("  *********** Listener Event: [chanel-images-response] ***********    ");
-//        try {
-//            LOG.info("Body: %s {} ", Converter.FromByteArray(eventReceive.getBody()));
-//            objectImages = Converter.FromByteArray(eventReceive.getBody());
-//            LOG.info(" Event Receive success");
-//        } catch (IOException | ClassNotFoundException e) {
-//            LOG.error("Error EventReceive [chanel-images-response]", e);
-//        }
+        LOG.info("  *********** Listener Event: [chanel-images-response] ***********    ");
+        try {
+            LOG.info("Body: %s {} ", Converter.FromByteArray(eventReceive.getBody()));
+            objectImages = Converter.FromByteArray(eventReceive.getBody());
+            LOG.info(" Event Receive success");
+        } catch (IOException | ClassNotFoundException e) {
+            LOG.error("Error EventReceive [chanel-images-response]", e);
+            objectImages = getEmptyValue();
+        }
     }
-    
-    @PostConstruct
-	public void listen() throws SSLException, ServerAddressNotSuppliedException {
-    	Queue queue = new Queue("chanel-images-response", "chanel-images-response", "localhost:50000");
-		taskExecutor.execute(() -> {
-			while (true) {
-			    try {
-			    	
-                    Transaction transaction = queue.CreateTransaction();
-                    TransactionMessagesResponse response = transaction.Receive(10, 10);
-                    if (response.getMessage().getBody().length > 0) {
-                    	objectImages = Converter.FromByteArray(response.getMessage().getBody());
-                        LOG.info("Processed: {}", objectImages);
-                        
-                        transaction.AckMessage();
-//                        Event event = new Event();
-//                        event.setEventId(response.getMessage().getMessageID());
-//                        event.setBody(Converter.ToByteArray(order));
-//						LOGGER.info("Sending event: id={}", event.getEventId());
-//                        channel.SendEvent(event);
-
-                            //transaction.RejectMessage();
-                    }
-                    Thread.sleep(10000);
-                } catch (Exception e) {
-					LOG.error("Error", e);
-                }
-			}
-		});
-
-	}
-    
     
     @Override
     public void onError(Throwable thrwbl) {
@@ -244,9 +186,12 @@ public class InformationServiceImp implements InformationService, StreamObserver
         String res = res1.toString();
         return res;
     }
-
-
-
+    
+    public Object getEmptyValue() {
+    	Map<String, Object> result_object = new HashMap<>();
+    	result_object.put("value", "empty");
+    	return result_object;
+    }
 
         
 }
