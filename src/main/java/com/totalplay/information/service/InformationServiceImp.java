@@ -51,6 +51,8 @@ public class InformationServiceImp implements InformationService, StreamObserver
     private Subscriber subscriber;
     private TaskExecutor taskExecutor;
     private Queue queue;
+    
+    private String messageID;
             
     public InformationServiceImp(Channel channel,Subscriber subscriber,TaskExecutor taskExecutor, Queue queue) {
         this.objectImages =null;
@@ -91,12 +93,12 @@ public class InformationServiceImp implements InformationService, StreamObserver
                 objectImages=null;
                 break;
             }
-            if(objectImages==null && max>=20000000){
-                System.out.println("-----task 3 -------"+max);
-                mp.put("images", "No data");
-                break;
-            }
-            max++;
+//            if(objectImages==null && max>=20000000){
+//                System.out.println("-----task 3 -------"+max);
+//                mp.put("images", "No data");
+//                break;
+//            }
+//            max++;
         }
   
         
@@ -131,8 +133,13 @@ public class InformationServiceImp implements InformationService, StreamObserver
         
         try {
         	//System.out.println("Sending: {}", idCommerce);
-            final SendMessageResult result = queue.SendQueueMessage(new Message()
-                    .setBody(Converter.ToByteArray(idCommerce)));
+        	Message message = new Message();
+        	message.setBody(Converter.ToByteArray(idCommerce));
+        	messageID = getid();
+        	message.setMetadata(messageID);
+//        	LOG.info("MessageID: %d, Body: %s", message.getMessageID(),
+//        	          Converter.FromByteArray(message.getMessage().getBody()));
+            final SendMessageResult result = queue.SendQueueMessage(message);
 
         } catch (ServerAddressNotSuppliedException | IOException e) {
 
@@ -200,10 +207,16 @@ public class InformationServiceImp implements InformationService, StreamObserver
                     Transaction transaction = queue.CreateTransaction();
                     TransactionMessagesResponse response = transaction.Receive(10, 10);
                     if (response.getMessage().getBody().length > 0) {
-                    	objectImages = Converter.FromByteArray(response.getMessage().getBody());
-                        LOG.info("Processed: {}", objectImages);
+                    	
+                    	LOG.info("Processed: {}, {}", Converter.FromByteArray(response.getMessage().getBody()), response.getMessage().getMetadata());
+                        if (messageID.compareTo(response.getMessage().getMetadata()) == 0) {
+                        	objectImages = Converter.FromByteArray(response.getMessage().getBody());
+                        	LOG.info("Processed: {}", objectImages);
+                        	transaction.AckMessage();
+                        }else {
+                        	transaction.RejectMessage();
+                        }
                         
-                        transaction.AckMessage();
 //                        Event event = new Event();
 //                        event.setEventId(response.getMessage().getMessageID());
 //                        event.setBody(Converter.ToByteArray(order));
@@ -212,9 +225,13 @@ public class InformationServiceImp implements InformationService, StreamObserver
 
                             //transaction.RejectMessage();
                     }
-                    Thread.sleep(10000);
+                    else {
+                    	LOG.info("No messages");
+                    }
+                    Thread.sleep(1000);
                 } catch (Exception e) {
 					LOG.error("Error", e);
+					objectImages = getEmptyValue();
                 }
 			}
 		});
@@ -245,7 +262,11 @@ public class InformationServiceImp implements InformationService, StreamObserver
         return res;
     }
 
-
+    public Object getEmptyValue() {
+    	Map<String, Object> result_object = new HashMap<>();
+    	result_object.put("value", "empty");
+    	return result_object;
+    }
 
 
         
